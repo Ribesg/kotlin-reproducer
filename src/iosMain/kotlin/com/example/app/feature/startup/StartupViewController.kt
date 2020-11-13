@@ -4,7 +4,7 @@ import platform.UIKit.UIViewController
 
 class StartupViewController : UIViewController(null, null) {
 
-    private lateinit var feature: Startup
+    private lateinit var feature: StartupView
 
     override fun loadView() {
         super.loadView()
@@ -13,7 +13,8 @@ class StartupViewController : UIViewController(null, null) {
 
     override fun viewDidLoad() {
         super.viewDidLoad()
-        feature = Startup(this, view as StartupUIView)
+        feature = StartupView(this, view as StartupUIView)
+        feature.presenter.onViewDidLoad()
     }
 
 }
