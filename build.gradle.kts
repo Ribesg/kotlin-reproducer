@@ -1,6 +1,8 @@
 import org.jetbrains.kotlin.gradle.plugin.KotlinTargetPreset
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
+import org.jetbrains.kotlin.gradle.tasks.CInteropProcess
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 
 group = "com.example"
 version = "0.0.1-SNAPSHOT"
@@ -11,8 +13,8 @@ repositories {
 }
 
 plugins {
-    kotlin("multiplatform") version "1.4.10"
-    kotlin("plugin.serialization") version "1.4.10"
+    kotlin("multiplatform") version "1.4.21-2"
+    kotlin("plugin.serialization") version "1.4.21-2"
 }
 
 val executablePath: String? = System.getenv("EXECUTABLE_PATH")
@@ -33,6 +35,13 @@ kotlin {
         presets.getByName<KotlinTargetPreset<KotlinNativeTarget>>("ios${targetArch.capitalize()}"),
         targetName
     ) {
+        compilations.getByName("main").cinterops.create("Bugsnag") {
+            defFile("src/iosMain/cinterop/Bugsnag.def")
+            includeDirs(
+                "$projectDir/carthage/Carthage/Build/iOS/Bugsnag.framework/Headers",
+                "$projectDir/carthage/Carthage/Build/iOS/Bugsnag.framework/Modules"
+            )
+        }
         binaries.executable(listOf(buildType)) {
             baseName = "app"
         }
@@ -49,9 +58,9 @@ kotlin {
 
 dependencies {
 
-    val coroutines = "1.3.9-native-mt-2"
-    val ktor = "1.4.1"
-    val serialization = "1.0.0-RC2"
+    val coroutines = "1.4.2-native-mt-2"
+    val ktor = "1.5.0"
+    val serialization = "1.0.1"
 
     "commonMainApi"("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines")
     "commonMainApi"("org.jetbrains.kotlinx:kotlinx-serialization-json:$serialization")
@@ -61,15 +70,6 @@ dependencies {
     "commonMainApi"("io.ktor:ktor-client-json:$ktor")
 
     "iosMainApi"("io.ktor:ktor-client-ios:$ktor")
-
-    // TODO Workaround inclusion of bad version of kotlinx-coroutines (1.3.9)
-    if (project.properties["android.injected.invoked.from.ide"] == "true") {
-        "iosMainApi"("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines")
-    } else {
-        "iosMainApi"("org.jetbrains.kotlinx:kotlinx-coroutines-core") {
-            version { strictly(coroutines) }
-        }
-    }
 
 }
 
@@ -94,7 +94,29 @@ if (executablePath != null && sdkName != null && targetBuildDir != null) {
     }
 }
 
+// Create Carthage tasks
+listOf("bootstrap", "update").forEach { type ->
+    task<Exec>("carthage${type.capitalize()}") {
+        group = "carthage"
+        executable = "./carthage.sh"
+        setWorkingDir("carthage")
+        args(
+            type,
+            "--platform", "iOS",
+            "--no-use-binaries",
+            "--cache-builds"
+        )
+    }
+}
+
+// Make CInterop and Native Link tasks depend on Carthage
+afterEvaluate {
+    tasks.filter { it is CInteropProcess || it is KotlinNativeLink }.forEach {
+        it.dependsOn("carthageBootstrap")
+    }
+}
+
 tasks.withType<Wrapper> {
-    gradleVersion = "6.7"
+    gradleVersion = "6.7.1"
     distributionType = Wrapper.DistributionType.ALL
 }

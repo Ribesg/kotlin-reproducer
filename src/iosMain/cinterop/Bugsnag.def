@@ -1,0 +1,7 @@
+depends = Foundation
+package = framework.Bugsnag
+language = Objective-C
+modules = Bugsnag
+
+compilerOpts = -framework Bugsnag
+linkerOpts = -framework Bugsnag
