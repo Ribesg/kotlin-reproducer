@@ -1,0 +1,8 @@
+.DS_Store
+**/.gradle/
+**/.idea/
+**/build/
+**/carthage/Carthage/
+**/out/
+**/xcuserdata/
+local.properties
